@@ -68,9 +68,7 @@ app.post("/form1", upload.any(), form1);
 app.post("/form2", upload.any(), form2);
 app.post("/form3", upload.any(), form3);
 
-app.listen(3000, () => console.log("Server running on http://localhost:3000"));
-
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 4444;
 app.listen(PORT, () => {
 	console.log(`App is listening on ${PORT}...`);
 });
