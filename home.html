@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Prescription Form</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			margin: 20px;
+		}
+
+		h1 {
+			text-align: center;
+		}
+
+		form {
+			max-width: 600px;
+			margin: 0 auto;
+		}
+
+		label {
+			font-weight: bold;
+			display: block;
+			margin-top: 15px;
+		}
+
+		input[type="text"],
+		input[type="number"],
+		textarea,
+		select {
+			width: 100%;
+			padding: 8px;
+			margin-top: 5px;
+			box-sizing: border-box;
+		}
+
+		.section {
+			margin-top: 20px;
+			border-top: 1px solid #ccc;
+			padding-top: 15px;
+		}
+
+		.medicine-entry {
+			margin-bottom: 10px;
+		}
+
+		button[type="submit"] {
+			margin-top: 20px;
+			padding: 10px 20px;
+			background-color: #2d89ef;
+			color: white;
+			border: none;
+			cursor: pointer;
+			font-size: 16px;
+			border-radius: 4px;
+		}
+
+		button[type="submit"]:hover {
+			background-color: #1b6ec2;
+		}
+	</style>
+</head>
+
+<body>
+	<h1>Doctor's Prescription Form</h1>
+
+	<form id="prescriptionForm" method="POST" action="/form" enctype="multipart/form-data">
+		<label for="name">Patient Name</label>
+		<input type="text" id="name" name="name" required />
+
+		<label for="age">Age</label>
+		<input type="number" id="age" name="age" required />
+
+		<label for="gender">Gender</label>
+		<select id="gender" name="gender" required>
+			<option value="">Select</option>
+			<option value="Male">Male</option>
+			<option value="Female">Female</option>
+			<option value="Other">Other</option>
+		</select>
+
+		<div class="section">
+			<label for="photo">Patient Photo:</label>
+			<input type="file" name="photo" />
+		</div>
+
+		<label for="remarks">Doctor's Remarks</label>
+		<textarea id="remarks" name="remarks" rows="3"></textarea>
+
+		<div class="section">
+			<label for="tests">Prescribed Tests</label>
+			<textarea id="tests" name="tests" rows="3" placeholder="List of medical tests..."></textarea>
+		</div>
+
+		<div class="section">
+			<label>Medicines & Dosages</label>
+			<div id="medicine-container">
+				<div class="medicine-entry">
+					<input type="text" name="medicines[]" placeholder="Medicine Name" required />
+					<input type="text" name="dosages[]" placeholder="Dosage" required />
+					<button type="button" onclick="removeMedicine(this)">Remove</button>
+				</div>
+			</div>
+			<button type="button" onclick="addMedicine()">
+				Add Another Medicine
+			</button>
+		</div>
+		<button type="submit">Generate PDF</button>
+	</form>
+</body>
+
+<script>
+	function addMedicine() {
+		const container = document.getElementById("medicine-container");
+		const div = document.createElement("div");
+		div.className = "medicine-entry";
+		div.innerHTML = `
+      <input type="text" name="medicines[]" placeholder="Medicine Name" required />
+      <input type="text" name="dosages[]" placeholder="Dosage" required />
+			<button type="button" onclick="removeMedicine(this)">Remove</button>
+    `;
+		container.appendChild(div);
+	}
+
+	function removeMedicine(button) {
+		const entry = button.parentNode;
+		entry.remove();
+	}
+</script>
+
+</html>

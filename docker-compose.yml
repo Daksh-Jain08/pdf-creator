@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  pdf-service:
+    build:
+      context: .
+    env_file: .env
+    container_name: pdf-service
+    ports:
+      - "4444:4444"
+    restart: unless-stopped
+    volumes:
+      - .:/usr/src/app
