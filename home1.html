@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dynamic Prescription Builder</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f7f7f7; }
+    .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 15px; background: white; border-radius: 5px; }
+    .field { margin-bottom: 10px; }
+    button { margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <h2>Create Prescription</h2>
+
+  <form id="prescriptionForm" method="POST" action="/form1" enctype="multipart/form-data">
+    <div id="sectionsContainer"></div>
+
+    <button type="button" onclick="addSection()">+ Add Section</button>
+    <br><br>
+    <button type="submit">Submit Prescription</button>
+  </form>
+
+  <script>
+    let sectionCount = 0;
+
+    function addSection() {
+      const sectionName = prompt("Enter section name (e.g., Symptoms, Tests, Medicines):");
+      if (!sectionName) return;
+
+      const sectionId = `section_${sectionCount++}`;
+      const sectionDiv = document.createElement("div");
+      sectionDiv.className = "section";
+      sectionDiv.id = sectionId;
+
+      sectionDiv.innerHTML = `
+        <h3>${sectionName}</h3>
+        <input type="hidden" name="sections[${sectionId}][name]" value="${sectionName}" />
+        <div class="fields"></div>
+        <button type="button" onclick="addField('${sectionId}')">+ Add Field</button>
+        <button type="button" onclick="removeSection('${sectionId}')">Remove Section</button>
+      `;
+
+      document.getElementById("sectionsContainer").appendChild(sectionDiv);
+    }
+
+    function addField(sectionId) {
+      const fieldLabel = prompt("Enter field label:");
+      if (!fieldLabel) return;
+
+      const fieldType = prompt("Enter field type: text, textarea, dropdown, date, image").toLowerCase();
+      if (!["text", "textarea", "dropdown", "date", "image"].includes(fieldType)) {
+        alert("Unsupported field type.");
+        return;
+      }
+
+      const section = document.getElementById(sectionId);
+      const fieldsDiv = section.querySelector(".fields");
+      const fieldCount = fieldsDiv.children.length;
+
+      const fieldContainer = document.createElement("div");
+      fieldContainer.className = "field";
+
+      let inputHTML = '';
+      switch (fieldType) {
+        case "text":
+          inputHTML = `<input type="text" name="sections[${sectionId}][fields][${fieldCount}][value]" />`;
+          break;
+        case "textarea":
+          inputHTML = `<textarea name="sections[${sectionId}][fields][${fieldCount}][value]"></textarea>`;
+          break;
+        case "date":
+          inputHTML = `<input type="date" name="sections[${sectionId}][fields][${fieldCount}][value]" />`;
+          break;
+        case "image":
+          inputHTML = `<input type="file" name="sections[${sectionId}][fields][${fieldCount}][value]" accept="image/*" />`;
+          break;
+        case "dropdown":
+          const options = prompt("Enter options separated by commas (e.g. Yes,No,N/A):");
+          const optionsArr = options.split(',').map(opt => opt.trim());
+          inputHTML = `<select name="sections[${sectionId}][fields][${fieldCount}][value]">
+            ${optionsArr.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+          </select>`;
+          break;
+      }
+
+      fieldContainer.innerHTML = `
+        <label>${fieldLabel}: ${inputHTML}</label>
+        <input type="hidden" name="sections[${sectionId}][fields][${fieldCount}][label]" value="${fieldLabel}" />
+        <input type="hidden" name="sections[${sectionId}][fields][${fieldCount}][type]" value="${fieldType}" />
+        <button type="button" onclick="this.parentElement.remove()">Remove Field</button>
+      `;
+
+      fieldsDiv.appendChild(fieldContainer);
+    }
+
+    function removeSection(sectionId) {
+      document.getElementById(sectionId).remove();
+    }
+  </script>
+
+</body>
+</html>

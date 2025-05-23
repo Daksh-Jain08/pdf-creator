@@ -15,4 +15,4 @@ COPY . .
 # Expose port
 EXPOSE ${PORT}
 
-CMD ["node", "index.js"]
+CMD ["npm", "start"]
