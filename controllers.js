@@ -139,4 +139,34 @@ const form1 = async (req, res) => {
 	}
 };
 
-module.exports = {form, form1};
+const form2 = async (req, res) => {
+  const doc = new PDFDocument({ size: "A4" });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "attachment; filename=output.pdf");
+  doc.pipe(res);
+	console.log("entered");
+
+  const fields = req.body.fields || {};
+  const files = req.files || [];
+
+  for (const key in fields) {
+		console.log(fields[key]);
+    const { label, type, value, x, y } = fields[key];
+		console.log(label, type, value, x, y);
+    const xCoord = parseInt(x, 10);
+    const yCoord = parseInt(y, 10);
+
+    if (type === "image") {
+      const uploaded = files.find(f => f.fieldname === `fields[${key}][value]`);
+      if (uploaded) {
+        doc.image(uploaded.path, xCoord, yCoord, { fit: [100, 100] });
+      }
+    } else {
+      doc.fontSize(12).text(`${label}: ${value}`, xCoord, yCoord);
+    }
+  }
+
+  doc.end();
+};
+
+module.exports = {form, form1, form2};
