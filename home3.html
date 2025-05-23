@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Resizable PDF Field Builder</title>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+			background: #fefefe;
+    }
+
+    #designCanvas {
+      position: relative;
+      width: 700px;
+      height: 1000px;
+      background-color: #fefefe;
+      background-image:
+        repeating-linear-gradient(90deg, transparent, transparent 19px, #ccc 20px),
+        repeating-linear-gradient(0deg, transparent, transparent 19px, #ccc 20px);
+      border: 2px solid #333;
+      margin: 20px 0;
+    }
+
+    .draggable-field {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #999;
+      padding: 5px;
+      cursor: move;
+      resize: both;
+      overflow: auto;
+      min-width: 40px;
+      min-height: 40px;
+    }
+
+    .draggable-field label {
+      display: block;
+      font-size: 12px;
+    }
+
+    .draggable-field input,
+    .draggable-field textarea,
+    .draggable-field select {
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Resizable Drag & Place Fields on PDF Canvas</h2>
+
+  <form method="POST" action="/form3" enctype="multipart/form-data">
+    <div id="designCanvas"></div>
+    <button type="button" onclick="addDraggableField()">+ Add Field</button>
+    <button type="submit">Submit PDF</button>
+  </form>
+
+  <script>
+    let fieldCount = 0;
+
+    function addDraggableField() {
+      const label = prompt("Enter field label:");
+      if (!label) return;
+
+      const type = prompt("Enter field type (text, textarea, date, image, dropdown):").toLowerCase();
+      if (!["text", "textarea", "date", "image", "dropdown"].includes(type)) {
+        alert("Invalid type");
+        return;
+      }
+
+      const fieldId = `field_${fieldCount++}`;
+      const div = document.createElement("div");
+      div.className = "draggable-field";
+      div.id = fieldId;
+      div.style.left = "0px";
+      div.style.top = "0px";
+      div.style.width = "120px";
+      div.style.height = "60px";
+
+      let inputElement = "";
+      if (type === "text") inputElement = `<input type="text" name="fields[${fieldId}][value]">`;
+      else if (type === "textarea") inputElement = `<textarea name="fields[${fieldId}][value]"></textarea>`;
+      else if (type === "date") inputElement = `<input type="date" name="fields[${fieldId}][value]">`;
+      else if (type === "image") inputElement = `<input type="file" name="fields[${fieldId}][value]" accept="image/*">`;
+      else if (type === "dropdown") {
+        const options = prompt("Enter dropdown options (comma separated):");
+        inputElement = `<select name="fields[${fieldId}][value]">
+          ${options.split(",").map(opt => `<option value="${opt.trim()}">${opt.trim()}</option>`).join("")}
+        </select>`;
+      }
+
+      div.innerHTML = `
+        <label>${label}</label>
+        ${inputElement}
+        <input type="hidden" name="fields[${fieldId}][label]" value="${label}">
+        <input type="hidden" name="fields[${fieldId}][type]" value="${type}">
+        <input type="hidden" name="fields[${fieldId}][x]" class="x-pos">
+        <input type="hidden" name="fields[${fieldId}][y]" class="y-pos">
+        <input type="hidden" name="fields[${fieldId}][width]" class="width-val">
+        <input type="hidden" name="fields[${fieldId}][height]" class="height-val">
+      `;
+
+      document.getElementById("designCanvas").appendChild(div);
+      makeDraggableAndResizable(div);
+    }
+
+    function makeDraggableAndResizable(element) {
+      interact(element)
+        .draggable({
+          modifiers: [interact.modifiers.snap({ targets: [interact.snappers.grid({ x: 20, y: 20 })] })],
+          listeners: {
+            move(event) {
+              const target = event.target;
+              const x = (parseFloat(target.getAttribute("data-x")) || 0) + event.dx;
+              const y = (parseFloat(target.getAttribute("data-y")) || 0) + event.dy;
+
+              target.style.transform = `translate(${x}px, ${y}px)`;
+              target.setAttribute("data-x", x);
+              target.setAttribute("data-y", y);
+
+              target.querySelector(".x-pos").value = Math.round(x);
+              target.querySelector(".y-pos").value = Math.round(y);
+            }
+          }
+        })
+        .resizable({
+          edges: { left: true, right: true, bottom: true, top: true },
+          modifiers: [interact.modifiers.snapSize({ targets: [interact.snappers.grid({ x: 20, y: 20 })] })],
+          listeners: {
+            move(event) {
+              const target = event.target;
+              const { width, height } = event.rect;
+
+              target.style.width = `${width}px`;
+              target.style.height = `${height}px`;
+
+              const x = (parseFloat(target.getAttribute("data-x")) || 0) + event.deltaRect.left;
+              const y = (parseFloat(target.getAttribute("data-y")) || 0) + event.deltaRect.top;
+
+              target.style.transform = `translate(${x}px, ${y}px)`;
+              target.setAttribute("data-x", x);
+              target.setAttribute("data-y", y);
+
+              target.querySelector(".x-pos").value = Math.round(x);
+              target.querySelector(".y-pos").value = Math.round(y);
+              target.querySelector(".width-val").value = Math.round(width);
+              target.querySelector(".height-val").value = Math.round(height);
+            }
+          }
+        });
+    }
+  </script>
+</body>
+</html>
+

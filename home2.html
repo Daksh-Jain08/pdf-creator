@@ -1,203 +1,218 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-	<meta charset="UTF-8" />
-	<title>Dynamic Form Builder (Drag & Drop)</title>
-	<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-	<style>
-		body {
-			font-family: sans-serif;
-			padding: 20px;
-			background: #000000;
-		}
+  <meta charset="UTF-8" />
+  <title>Prescription Form Designer</title>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      padding: 20px;
+    }
 
-		#canvas {
-			position: relative;
-			width: 800px;
-			height: 800px;
-			border: 2px dashed #ccc;
-			background: #fff;
-			margin-bottom: 20px;
-		}
+    #designCanvas {
+      position: relative;
+      width: 595px;
+      height: 842px;
+      background-color: #fff;
+      background-image:
+        repeating-linear-gradient(90deg, transparent, transparent 19px, #eee 20px),
+        repeating-linear-gradient(0deg, transparent, transparent 19px, #eee 20px);
+      border: 2px solid #333;
+      margin-bottom: 20px;
+    }
 
-		.field {
-			position: absolute;
-			padding: 8px;
-			background: #e3f2fd;
-			border: 1px solid #2196f3;
-			border-radius: 4px;
-			cursor: move;
-		}
+    .section {
+      position: absolute;
+      border: 2px dashed #337ab7;
+      background-color: #fdfdfd;
+      padding: 5px;
+      box-sizing: border-box;
+      overflow: visible;
+    }
 
-		.field input,
-		.field textarea,
-		.field select {
-			display: block;
-			margin-top: 5px;
-			width: 100%;
-		}
+    .section h4 {
+      margin: 0 0 5px 0;
+      font-size: 14px;
+      background: #337ab7;
+      color: white;
+      padding: 3px 6px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
 
-		#designCanvas {
-			position: relative;
-			width: 800px;
-			height: 1000px;
-			background-color: #fefefe;
-			background-image:
-				repeating-linear-gradient(90deg, transparent, transparent 19px, #ccc 20px),
-				repeating-linear-gradient(0deg, transparent, transparent 19px, #ccc 20px);
-			border: 2px solid #333;
-			margin: 20px 0;
-		}
+    .draggable-field {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #999;
+      padding: 3px;
+      min-width: 40px;
+      min-height: 30px;
+      overflow: auto;
+      font-size: 12px;
+    }
 
-		.draggable-field {
-			position: absolute;
-			background: #fff;
-			border: 1px solid #999;
-			padding: 5px;
-			cursor: move;
-		}
-	</style>
+    .draggable-field input,
+    .draggable-field textarea,
+    .draggable-field select {
+      width: 100%;
+      font-size: 12px;
+    }
+
+    button {
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 
 <body>
-	<h2 style="color: #ffffff">Drag & Place Fields on PDF Canvas</h2>
+  <h2>Prescription Form Builder</h2>
 
-	<form method="POST" action="/form2" enctype="multipart/form-data">
-		<div id="designCanvas"></div>
+  <form method="POST" action="/form2" enctype="multipart/form-data" onsubmit="return preparePayload()">
+    <div id="designCanvas"></div>
+    <button type="button" onclick="addSection()">+ Add Section</button>
+    <button type="submit">Submit PDF</button>
+    <input type="hidden" name="payload" id="payload" />
+  </form>
 
-		<button type="button" onclick="addDraggableField()">+ Add Field</button>
-		<button type="submit">Submit PDF</button>
-	</form>
+  <script>
+    let sectionCount = 0;
+    let fieldCount = 0;
 
-	<script>
-		let fieldCount = 0;
+    function addSection() {
+      const title = prompt("Enter section title:");
+      if (!title) return;
 
-		function addDraggableField() {
-			const label = prompt("Enter field label:");
-			if (!label) return;
+      const section = document.createElement("div");
+      section.className = "section";
+      section.id = `section_${sectionCount}`;
+      section.setAttribute("data-section-id", sectionCount);
+      section.style.left = "0px";
+      section.style.top = "0px";
+      section.style.width = "300px";
+      section.style.height = "200px";
 
-			const type = prompt(
-				"Enter field type (text, textarea, date, image, dropdown):",
-			).toLowerCase();
-			if (!["text", "textarea", "date", "image", "dropdown"].includes(type))
-				return alert("Invalid type");
+      section.innerHTML = `
+        <h4>${title}</h4>
+        <button type="button" onclick="addFieldToSection(${sectionCount})">+ Add Field</button>
+      `;
 
-			const fieldId = `field_${fieldCount++}`;
+      document.getElementById("designCanvas").appendChild(section);
+      makeDraggableAndResizable(section, true);
+      sectionCount++;
+    }
 
-			const div = document.createElement("div");
-			div.className = "draggable-field";
-			div.draggable = true;
-			div.style.left = "0px";
-			div.style.top = "0px";
-			div.id = fieldId;
+    function addFieldToSection(sectionId) {
+      const label = prompt("Field label?");
+      if (!label) return;
 
-			let inputElement = "";
-			if (type === "text")
-				inputElement = `<input type="text" name="fields[${fieldId}][value]">`;
-			else if (type === "textarea")
-				inputElement = `<textarea name="fields[${fieldId}][value]"></textarea>`;
-			else if (type === "date")
-				inputElement = `<input type="date" name="fields[${fieldId}][value]">`;
-			else if (type === "image")
-				inputElement = `<input type="file" name="fields[${fieldId}][value]" accept="image/*">`;
-			else if (type === "dropdown") {
-				const options = prompt("Enter dropdown options (comma separated):");
-				inputElement = `<select name="fields[${fieldId}][value]">
-      ${options
-						.split(",")
-						.map((opt) => `<option value="${opt.trim()}">${opt.trim()}</option>`)
-						.join("")}
-    </select>`;
-			}
+      const type = prompt("Field type (text, textarea, date, image, dropdown)?").toLowerCase();
+      if (!["text", "textarea", "date", "image", "dropdown"].includes(type)) {
+        alert("Invalid type");
+        return;
+      }
 
-			div.innerHTML = `
-    <label>${label}</label>
-    ${inputElement}
-    <input type="hidden" name="fields[${fieldId}][label]" value="${label}">
-    <input type="hidden" name="fields[${fieldId}][type]" value="${type}">
-    <input type="hidden" name="fields[${fieldId}][x]" class="x-pos">
-    <input type="hidden" name="fields[${fieldId}][y]" class="y-pos">
-  `;
+      const section = document.querySelector(`#section_${sectionId}`);
+      const field = document.createElement("div");
+      field.className = "draggable-field";
+      field.id = `field_${fieldCount}`;
+      field.setAttribute("data-field-id", fieldCount);
+      field.setAttribute("data-type", type);
+      field.setAttribute("data-label", label);
+			field.setAttribute("data-x", 0);
+			field.setAttribute("data-y", 0);
+      field.style.left = "0px";
+      field.style.top = "0px";
+      field.style.width = "120px";
+      field.style.height = "40px";
 
-			//document.getElementById("canvas").appendChild(div);
-			document.getElementById("designCanvas").appendChild(div);
-			makeDraggable(div);
+      let input = "";
+      if (type === "text") input = `<input type="text">`;
+      else if (type === "textarea") input = `<textarea></textarea>`;
+      else if (type === "date") input = `<input type="date">`;
+      else if (type === "image") input = `<input type="file" accept="image/*">`;
+      else if (type === "dropdown") {
+        const opts = prompt("Enter options (comma-separated):");
+        input = `<select>${opts.split(",").map(o => `<option>${o.trim()}</option>`).join("")}</select>`;
+      }
 
-			//interact(`#${fieldId}`).draggable({
-			//	listeners: {
-			//		move(event) {
-			//			const target = event.target;
-			//			const x =
-			//				(parseFloat(target.getAttribute("data-x")) || 0) + event.dx;
-			//			const y =
-			//				(parseFloat(target.getAttribute("data-y")) || 0) + event.dy;
-			//
-			//			target.style.transform = `translate(${x}px, ${y}px)`;
-			//			target.setAttribute("data-x", x);
-			//			target.setAttribute("data-y", y);
-			//
-			//			target.querySelector(".x-pos").value = Math.round(x);
-			//			target.querySelector(".y-pos").value = Math.round(y);
-			//		},
-			//	},
-			//});
-		}
+      field.innerHTML = `<label>${label}</label><br>${input}`;
+      section.appendChild(field);
+      makeDraggableAndResizable(field, false);
+      fieldCount++;
+    }
 
-		//function addDraggableField(label = "Field", type = "text") {
-		//	const fieldId = `field_${Date.now()}`;
-		//	const div = document.createElement("div");
-		//	div.className = "draggable-field";
-		//	div.draggable = true;
-		//	div.style.left = "0px";
-		//	div.style.top = "0px";
-		//	div.id = fieldId;
-		//
-		//	div.innerHTML = `
-		//  <label>${label}</label><br>
-		//  <input type="${type}" disabled><br>
-		//  <input type="hidden" name="fields[${fieldId}][label]" value="${label}">
-		//  <input type="hidden" name="fields[${fieldId}][type]" value="${type}">
-		//  <input type="hidden" name="fields[${fieldId}][x]" class="x-pos">
-		//  <input type="hidden" name="fields[${fieldId}][y]" class="y-pos">
-		//`;
-		//
-		//	document.getElementById("designCanvas").appendChild(div);
-		//
-		//	makeDraggable(div);
-		//}
+    function makeDraggableAndResizable(el, isSection) {
+      interact(el)
+        .draggable({
+          listeners: {
+            move(event) {
+              const x = (parseFloat(el.getAttribute("data-x")) || 0) + event.dx;
+              const y = (parseFloat(el.getAttribute("data-y")) || 0) + event.dy;
+              el.style.transform = `translate(${x}px, ${y}px)`;
+              el.setAttribute("data-x", x);
+              el.setAttribute("data-y", y);
+            }
+          }
+        })
+        .resizable({
+          edges: { left: true, right: true, bottom: true, top: true },
+          listeners: {
+            move(event) {
+              let { width, height } = event.rect;
+              el.style.width = `${width}px`;
+              el.style.height = `${height}px`;
+              const x = (parseFloat(el.getAttribute("data-x")) || 0) + event.deltaRect.left;
+              const y = (parseFloat(el.getAttribute("data-y")) || 0) + event.deltaRect.top;
+              el.style.transform = `translate(${x}px, ${y}px)`;
+              el.setAttribute("data-x", x);
+              el.setAttribute("data-y", y);
+            }
+          }
+        });
+    }
 
-		function makeDraggable(element) {
-			let offsetX = 0,
-				offsetY = 0;
+    function preparePayload() {
+      const sections = [];
+      document.querySelectorAll(".section").forEach(section => {
+        const sectionId = section.id;
+        const title = section.querySelector("h4").textContent;
+        const fields = [];
 
-			element.onmousedown = function (e) {
-				offsetX = e.clientX - element.offsetLeft;
-				offsetY = e.clientY - element.offsetTop;
+        section.querySelectorAll(".draggable-field").forEach(field => {
+          const rect = field.getBoundingClientRect();
+          const parentRect = section.getBoundingClientRect();
 
-				document.onmousemove = function (e) {
-					let newX = e.clientX - offsetX;
-					let newY = e.clientY - offsetY;
+          fields.push({
+            id: field.id,
+            label: field.getAttribute("data-label"),
+            type: field.getAttribute("data-type"),
+            x: field.getAttribute("data-x"),
+            y: field.getAttribute("data-y"),
+            width: field.offsetWidth,
+            height: field.offsetHeight
+          });
+        });
 
-					// Snap to grid (20x20)
-					newX = Math.round(newX / 20) * 20;
-					newY = Math.round(newY / 20) * 20;
+        const canvasRect = document.getElementById("designCanvas").getBoundingClientRect();
 
-					element.style.left = `${newX}px`;
-					element.style.top = `${newY}px`;
+        sections.push({
+          id: sectionId,
+          title: title,
+          x: parseFloat(section.getAttribute("data-x")) || 0,
+          y: parseFloat(section.getAttribute("data-y")) || 0,
+          width: section.offsetWidth,
+          height: section.offsetHeight,
+          fields: fields
+        });
+      });
 
-					const fieldId = element.id;
-					element.querySelector(".x-pos").value = newX;
-					element.querySelector(".y-pos").value = newY;
-				};
-
-				document.onmouseup = function () {
-					document.onmousemove = null;
-					document.onmouseup = null;
-				};
-			};
-		}
-	</script>
+      document.getElementById("payload").value = JSON.stringify({ sections });
+      return true;
+    }
+  </script>
 </body>
-
 </html>
+
